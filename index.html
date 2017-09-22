@@ -1,0 +1,260 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <title>
+        ToDo App
+    </title>
+    <link href="https://fonts.googleapis.com/css?family=Comfortaa" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Comfortaa', cursive;
+            color: #606060;
+            font-size: 2em;
+        }
+
+        h1 {
+            text-align: center;
+            color: #666;
+        }
+
+        .editTask {
+            display: inline;
+        }
+
+        .editTask input[type="text"] {
+            background: #fff;
+            /* -webkit-appearance: none; */
+            border: none;
+        }
+
+        .jumbotron {
+            color: #777;
+        }
+
+        .task {
+            position: relative;
+            display: block;
+            padding: 10px;
+        }
+
+        .card {
+            margin: 0 auto 2em;
+            max-width: 600px;
+            padding: none;
+            background-color: white;
+            box-shadow: 0 0.06em 0.2em 0 rgba(0, 0, 0, 0.1),
+            0 0.5em 0 -0.25em #ffffff,
+            0 0.56em 0.2em -0.25em rgba(0, 0, 0, 0.1),
+            0 1em 0 -0.5em #ffffff,
+            0 1.06em 0.2em -0.5em rgba(0, 0, 0, 0.1);
+        }
+
+        #adder {
+            margin-bottom: 0px;
+        }
+
+        hr {
+            margin-bottom: 0px;
+            margin-top: 0px;
+        }
+
+
+        #newTask {
+            width: 100%;
+            height: auto;
+            border: none;
+        }
+
+        #tasks {
+            min-height: 50px;
+            padding-left: 10px;
+            margin-bottom: 0;
+        }
+
+        #footer {
+            height: 30px;
+            text-align: center;
+        }
+
+        .taskName {
+            padding-left: 50px;
+            padding-right: 30px;
+            flex: 1;
+        }
+
+        .task {
+            display: flex;
+        }
+
+        .check {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+
+            -webkit-appearance: none;
+        }
+
+        .editButton,
+        .deleteButton {
+            opacity: 0;
+            transition: opacity 0.3s ease-out;
+        }
+
+        .task:hover .editButton,
+        .task:hover .deleteButton {
+            opacity: 100;
+            transition: opacity 0.3s ease-in;
+        }
+
+        input[type="checkbox"]:focus {
+            outline: none;
+        }
+
+        input[type="checkbox"]::after {
+            content: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="-10 -18 100 135"><circle cx="50" cy="50" r="50" fill="none" stroke="#bddad5" stroke-width="3"/></svg>');
+        }
+
+        input[type="checkbox"]:checked::after {
+            content: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="-10 -18 100 135"><circle cx="50" cy="50" r="50" fill="none" stroke="#bddad5" stroke-width="3"/><path fill="#5dc2af" d="M72 25L42 71 27 56l-4 4 20 20 34-52z"/></svg>');
+        }
+
+        #footer *:focus {
+            outline: none;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js">
+
+    </script>
+    <script>
+        var url = "http://localhost:3001/tasks/";
+        var todoItems = [];
+        function render() {
+            $.get(
+                url,
+                function (data) {
+
+                    $('#tasks').html("");
+                    todoItems = JSON.parse(data);
+
+                    console.log(todoItems);
+                    for (var i = 0; i < todoItems.length; i++) {
+                        var li = $("<li></li>").addClass("task");
+                        var checkbox = $("<input type='checkbox'/>").addClass("check")
+                            .change(function (i) {
+                                $.ajax({
+                                    url: url + "toggle/" + todoItems[i]._id,
+                                    type: 'POST',
+                                }).done(function (data) {
+                                    window.render();
+                                });
+
+                            }.bind(this, i));
+                        li.append(checkbox);
+                        var taskSpan = $("<span></span>").addClass("taskName").text(todoItems[i].caption);
+                        if (todoItems[i].completed == '1') {
+                            checkbox.get(0).checked = "true";
+                            taskSpan.css({ 'text-decoration': 'line-through', 'color': '#AAA' })
+                        }
+                        li.append(taskSpan);
+
+                        var editBtn = $("<button></button>").addClass("editButton").addClass("btn-link").text("Edit")
+                            .click(function (i, taskSpan) {
+                                console.log(i);
+                                var ip = $("<input type='text'/>").addClass("form-control").val(todoItems[i].caption);
+                                var form = $("<form></form>").addClass("editTask").append(ip);
+
+                                taskSpan.html("").append(form);
+                                ip.focus();
+                                form.submit(function (e) {
+                                    e.preventDefault();
+                                    $.ajax({
+                                        url: url + "edit/" + todoItems[i]._id,
+                                        type: 'POST',
+                                        data: { 'caption': ip.val() },
+                                    }).done(function (data) {
+                                        taskSpan.html(ip.val());
+                                        window.render();
+                                    });
+
+                                }.bind(this));
+                            }.bind(this, i, taskSpan));
+                        li.append(editBtn);
+
+                        var deleteBtn = $("<button></button>").addClass("deleteButton").addClass("btn-link").text("X")
+                            .click(function (i) {
+                                console.log(todoItems[i].id);
+                                $.ajax({
+                                    url: url + "delete/" + todoItems[i]._id,
+                                    type: 'POST',
+
+                                }).done(function (data) {
+                                    window.render();
+                                });
+
+                            }.bind(this, i));
+
+                        li.append(deleteBtn);
+                        $('#tasks').append(li);
+                    }
+                }
+            );
+
+        }
+
+        $(function () {
+            window.render();
+            $('#adder').submit(function (e) {
+                e.preventDefault();
+                $.post(
+                    url,
+                    { 'caption': ($('#newTask').val()) },
+                    function () {
+                        $('#newTask').val('');
+                        window.render();
+                    }
+                )
+            });
+
+            $('#selectAll').click(function () {
+                $('.task').show();
+            });
+
+            $('#selectActive').click(function () {
+                $('.task').show();
+                $("input:checkbox:checked").parent().hide();
+            });
+
+            $('#selectCompleted').click(function () {
+                $('.task').show();
+                $("input:checkbox:not(:checked)").parent().hide();
+            });
+        });
+    </script>
+</head>
+
+<body class="container jumbotron">
+    <h1>todos</h1>
+    <div class="card">
+        <form id="adder" class="form-group">
+            <input type="input" class="form-control input-lg" autocomplete="off" name="task" id="newTask" placeholder="Enter your wish, master!"
+            />
+        </form>
+        <hr/>
+        <ul id="tasks"></ul>
+        <?php
+            function displayData() {
+                echo "Hello";
+            }
+        ?>
+            <hr/>
+            <div id="footer">
+                <span style="float:left; margin-left:10px; margin-top:5px; font-size: 0.7em;" id="pending">  </span>
+                <button class="btn-link btn-sm" id="selectAll">All</button> &nbsp; .
+                <button class="btn-link btn-sm" id="selectActive">Active</button> &nbsp; .
+                <button class="btn-link btn-sm" id=selectCompleted>Completed</button>
+            </div>
+    </div>
+</body>
+
+</html>
